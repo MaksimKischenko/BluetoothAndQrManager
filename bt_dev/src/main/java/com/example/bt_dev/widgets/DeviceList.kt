@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun DeviceList(activity: Activity) {
+fun DeviceList(activity: Activity, bluetoothService: BluetoothService) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val deviceState = remember {
@@ -91,7 +91,8 @@ fun DeviceList(activity: Activity) {
                                     activity,
                                     scope,
                                     snackbarHostState,
-                                    openDialog
+                                    openDialog,
+                                    bluetoothService
                                 )
                             }
                             .size(24.dp),
@@ -116,7 +117,8 @@ fun DeviceList(activity: Activity) {
             DeviceListButton(
                 deviceState,
                 activity,
-                snackbarHostState
+                snackbarHostState,
+                bluetoothService
             )
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -164,7 +166,8 @@ private fun checkLocationSettings(
     activity: Activity,
     scope: CoroutineScope,
     snackbarHostState: SnackbarHostState,
-    openDialog: MutableState<Boolean>
+    openDialog: MutableState<Boolean>,
+    bluetoothService: BluetoothService
 ) {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -186,7 +189,7 @@ private fun checkLocationSettings(
         }
 
     } else {
-        BluetoothService.startBtDiscovery()
+        bluetoothService.startBtDiscovery()
         openDialog.value = true
     }
 }

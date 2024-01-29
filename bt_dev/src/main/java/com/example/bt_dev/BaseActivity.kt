@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 
 
 import com.example.bluetoothmodule.ui.theme.BaseModuleTheme
@@ -20,8 +21,11 @@ class BaseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val bluetoothService = BluetoothService.getInstanceAndInitAdapter(LocalContext.current, activity).instance
+            bluetoothService.checkPermissions(this, activity)
+            bluetoothService.registerIntentFilters(activity)
             BaseModuleTheme {
-                BaseContent(activity)
+                BaseContent(activity, bluetoothService)
             }
         }
     }
@@ -30,7 +34,7 @@ class BaseActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun BaseContent(activity: Activity) {
-    DeviceList(activity)
+fun BaseContent(activity: Activity, bluetoothService: BluetoothService) {
+    DeviceList(activity, bluetoothService)
 }
 

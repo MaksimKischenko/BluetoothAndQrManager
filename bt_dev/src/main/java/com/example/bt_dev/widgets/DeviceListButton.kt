@@ -45,15 +45,15 @@ import kotlinx.coroutines.launch
 fun DeviceListButton(
     devicesState: MutableState<List<Device>>,
     activity: Activity,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    bluetoothService: BluetoothService
 ) {
     val scope = rememberCoroutineScope()
-    val bluetoothService =
-        BluetoothService.getInstanceAndInitAdapter(LocalContext.current, activity);
+    val bluetoothService = BluetoothService.getInstanceAndInitAdapter(LocalContext.current, activity);
     val colorState = remember {
         mutableStateOf(bluetoothService.adapter?.isEnabled ?: false)
     }
-    val launcher = BluetoothService.enableBluetoothAndLoadBluetoothDeviceList(
+    val launcher = bluetoothService.instance.enableBluetoothAndLoadBluetoothDeviceList(
         context = LocalContext.current,
         colorState = colorState,
         devicesState

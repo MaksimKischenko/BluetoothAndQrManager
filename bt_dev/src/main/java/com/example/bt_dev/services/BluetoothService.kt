@@ -32,30 +32,29 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.util.concurrent.CompletableFuture
 import kotlin.random.Random
 
 
 class BluetoothService {
-
-    data class BluetoothServiceResult(val service: BluetoothService, val adapter: BluetoothAdapter?)
-
+    var tempDevicesSet = mutableListOf<Device>()
+    val promise = CompletableFuture<MutableList<Device>>()
+    data class BluetoothServiceResult(val instance: BluetoothService, val adapter: BluetoothAdapter?)
     companion object {
-
         private var instance: BluetoothService? = null
         private var btAdapter : BluetoothAdapter? = null
-        var tempDevicesSet = mutableSetOf<Device>()
-        var deviceFlow: Flow<List<Device>>? = null
+
+
 
         fun getInstanceAndInitAdapter(context: Context, activity: Activity): BluetoothServiceResult {
             if (instance == null) {
                 val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
                 btAdapter = bManager.adapter
                 instance =  BluetoothService()
-                checkPermissions(context, activity)
             }
-            registerIntentFilters(activity)
             return BluetoothServiceResult(instance!!, btAdapter)
         }
+    }
 
 
         fun startBtDiscovery() {
@@ -69,7 +68,7 @@ class BluetoothService {
         }
 
 
-       private fun checkPermissions(context: Context, activity: Activity) {
+       fun checkPermissions(context: Context, activity: Activity) {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN ) != PackageManager.PERMISSION_GRANTED
                     &&  ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED
@@ -157,15 +156,22 @@ class BluetoothService {
                        BluetoothDevice.EXTRA_DEVICE,
                        BluetoothDevice::class.java
                    )
-                   tempDevicesSet.add(Device(device, false))
+
+                   Thread {
+                       tempDevicesSet.add(Device(device, false))
+                       Thread.sleep(10000)
+                       promise.complete(tempDevicesSet)
+                   }.start()
+
+
                    try {
                        Log.d("MyLog", "DEVICE: ${device?.address}")
+                       Log.d("MyLog", "PROMISE: ${device?.address}")
                    } catch (e:SecurityException) {
                        Log.d("MyLog", "ERROR_GET: ${e}")
                    }
 
                } else if(intent?.action == BluetoothDevice.ACTION_BOND_STATE_CHANGED) {
-                   deviceFlow = emitFlowDevices(tempDevicesSet)
                    Log.d("MyLog", "ACTION_BOND_STATE_CHANGED")
                } else if(intent?.action == BluetoothAdapter.ACTION_DISCOVERY_FINISHED) {
                    Log.d("MyLog", "ACTION_DISCOVERY_FINISHED")
@@ -174,16 +180,15 @@ class BluetoothService {
         }
 
 
-       private fun emitFlowDevices(set: MutableSet<Device>): Flow<List<Device>> = flow {
+       private fun emitFlowDevices(set: MutableList<Device>): Flow<List<Device>> = flow {
             delay(1000L)
             emit(set.toList())
        }
 
-        private fun registerIntentFilters(activity: Activity) {
+      fun registerIntentFilters(activity: Activity) {
             Log.d("MyLog", "registerIntentFilters")
             activity.registerReceiver(bReceiver, IntentsProvider.actionFoundBluetoothDeviceFilter)
             activity.registerReceiver(bReceiver, IntentsProvider.actionBondStateChangedBluetoothDeviceFilter)
             activity.registerReceiver(bReceiver, IntentsProvider.actionDiscoveryFinishedBluetoothAdapterFilter)
        }
     }
-}
