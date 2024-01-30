@@ -29,7 +29,7 @@ import com.example.bt_dev.services.BluetoothService
 import com.example.bt_dev.util.FontProvider
 
 @Composable
-fun DeviceItem(device: Device, selected: Boolean, onTap: (item: Device) -> Unit) {
+fun PairedDeviceItem(device: Device, selected: Boolean, onTap: (item: Device) -> Unit) {
     val provider = FontProvider.getCertificateProvider()
     val font = Font(
         googleFont = GoogleFont("Open Sans"), //Open Sans

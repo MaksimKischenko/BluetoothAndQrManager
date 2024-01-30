@@ -19,8 +19,6 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
@@ -28,16 +26,12 @@ import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
 import com.example.bt_dev.util.IntentsProvider
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import java.util.concurrent.CompletableFuture
-import kotlin.random.Random
 
 
 class BluetoothService {
-    var tempDevicesSet = mutableListOf<Device>()
+    var pairedDevicesList = mutableListOf<Device>()
+    var foundDevicesList = mutableListOf<Device>()
     val promise = CompletableFuture<MutableList<Device>>()
     data class BluetoothServiceResult(val instance: BluetoothService, val adapter: BluetoothAdapter?)
     companion object {
@@ -108,7 +102,7 @@ class BluetoothService {
                     Toast.makeText(context, "Bluetooth включен", Toast.LENGTH_SHORT).show()
                     colorState.value = true
                     devicesState.value = getBluetoothDeviceList(context)
-                    tempDevicesSet.addAll(devicesState.value)
+                    pairedDevicesList.addAll(devicesState.value)
                 } else {
                     Toast.makeText(context, "Bluetooth выключен", Toast.LENGTH_SHORT).show()
                 }
@@ -134,7 +128,6 @@ class BluetoothService {
                 val selectedMacAddressName = when {
                     preferencesManager.contains(PrefsKeys.selectedDeviceMac.key) ->
                         preferencesManager.read(PrefsKeys.selectedDeviceMac)
-
                     else -> ""
                 }
                 when (selectedMacAddressName) {
@@ -158,15 +151,15 @@ class BluetoothService {
                    )
 
                    Thread {
-                       tempDevicesSet.add(Device(device, false))
+                       if(!pairedDevicesList.map { e-> e.device }.contains(device)) {
+                           foundDevicesList.add(Device(device, false))
+                       }
                        Thread.sleep(10000)
-                       promise.complete(tempDevicesSet)
+                       promise.complete(foundDevicesList)
                    }.start()
-
 
                    try {
                        Log.d("MyLog", "DEVICE: ${device?.address}")
-                       Log.d("MyLog", "PROMISE: ${device?.address}")
                    } catch (e:SecurityException) {
                        Log.d("MyLog", "ERROR_GET: ${e}")
                    }
@@ -178,12 +171,6 @@ class BluetoothService {
                }
             }
         }
-
-
-       private fun emitFlowDevices(set: MutableList<Device>): Flow<List<Device>> = flow {
-            delay(1000L)
-            emit(set.toList())
-       }
 
       fun registerIntentFilters(activity: Activity) {
             Log.d("MyLog", "registerIntentFilters")
