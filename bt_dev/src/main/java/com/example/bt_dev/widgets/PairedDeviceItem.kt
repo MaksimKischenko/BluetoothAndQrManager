@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
@@ -22,10 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bluetoothmodule.ui.theme.DeviceMac
 import com.example.bluetoothmodule.ui.theme.DeviceName
-import com.example.bt_dev.data.PreferencesManager
-import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
-import com.example.bt_dev.services.BluetoothService
 import com.example.bt_dev.util.FontProvider
 
 @Composable

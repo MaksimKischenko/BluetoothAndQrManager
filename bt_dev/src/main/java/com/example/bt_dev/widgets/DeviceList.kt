@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -40,13 +39,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.startActivityForResult
-import androidx.core.content.ContextCompat.getSystemService
-import com.example.bluetoothmodule.ui.theme.Purple40
 import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
-import com.example.bt_dev.services.BluetoothService
+import com.example.bt_dev.services.BluetoothController
+import com.example.bt_dev.services.BluetoothDevicesService
 import com.example.bt_dev.util.IntentsProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -55,7 +52,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun DeviceList(activity: Activity, bluetoothService: BluetoothService) {
+fun DeviceList(
+    activity: Activity,
+    bluetoothDevicesService: BluetoothDevicesService,
+    bluetoothController: BluetoothController
+) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val deviceState = remember {
@@ -92,7 +93,7 @@ fun DeviceList(activity: Activity, bluetoothService: BluetoothService) {
                                     scope,
                                     snackbarHostState,
                                     openDialog,
-                                    bluetoothService
+                                    bluetoothDevicesService
                                 )
                             }
                             .size(24.dp),
@@ -118,7 +119,7 @@ fun DeviceList(activity: Activity, bluetoothService: BluetoothService) {
                 deviceState,
                 activity,
                 snackbarHostState,
-                bluetoothService
+                bluetoothDevicesService
             )
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -136,10 +137,11 @@ fun DeviceList(activity: Activity, bluetoothService: BluetoothService) {
                             deviceState.value[index].isSelected -> true
                             else -> selectedDevice.value == deviceState.value[index]
                         }
-                        DeviceItem(
+                        PairedDeviceItem(
                             device = deviceState.value[index],
                             selected = selected,
                             onTap = {
+                                val result = it.device?.let { value -> bluetoothController.connect(value.address) }
                                 deviceState.value = deviceState.value.map { device ->
                                     device.copy(isSelected = false)
                                 }
@@ -148,6 +150,7 @@ fun DeviceList(activity: Activity, bluetoothService: BluetoothService) {
                                     PrefsKeys.selectedDeviceMac,
                                     selectedDevice.value.device?.address
                                 )
+
                             }
                         )
                     }
@@ -167,7 +170,7 @@ private fun checkLocationSettings(
     scope: CoroutineScope,
     snackbarHostState: SnackbarHostState,
     openDialog: MutableState<Boolean>,
-    bluetoothService: BluetoothService
+    bluetoothService: BluetoothDevicesService
 ) {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {

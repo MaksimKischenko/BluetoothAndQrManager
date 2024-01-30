@@ -1,7 +1,6 @@
 package com.example.bt_dev
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,7 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 
 
 import com.example.bluetoothmodule.ui.theme.BaseModuleTheme
-import com.example.bt_dev.services.BluetoothService
+import com.example.bt_dev.services.BluetoothController
+import com.example.bt_dev.services.BluetoothDevicesService
 import com.example.bt_dev.widgets.DeviceList
 
 class BaseActivity : ComponentActivity() {
@@ -21,11 +21,17 @@ class BaseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val bluetoothService = BluetoothService.getInstanceAndInitAdapter(LocalContext.current, activity).instance
-            bluetoothService.checkPermissions(this, activity)
-            bluetoothService.registerIntentFilters(activity)
+            val bluetoothDevicesService = BluetoothDevicesService.getInstanceAndInitAdapter(LocalContext.current, activity).instance
+            val bluetoothDevicesAdapter = BluetoothDevicesService.getInstanceAndInitAdapter(LocalContext.current, activity).adapter
+            val bluetoothController = BluetoothController(bluetoothDevicesAdapter!!)
+            bluetoothDevicesService.checkPermissions(this, activity)
+            bluetoothDevicesService.registerIntentFilters(activity)
             BaseModuleTheme {
-                BaseContent(activity, bluetoothService)
+                BaseContent(
+                    activity,
+                    bluetoothDevicesService,
+                    bluetoothController
+                )
             }
         }
     }
@@ -34,7 +40,15 @@ class BaseActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun BaseContent(activity: Activity, bluetoothService: BluetoothService) {
-    DeviceList(activity, bluetoothService)
+fun BaseContent(
+    activity: Activity,
+    bluetoothDevicesService: BluetoothDevicesService,
+    bluetoothController: BluetoothController
+) {
+    DeviceList(
+        activity,
+        bluetoothDevicesService,
+        bluetoothController
+    )
 }
 

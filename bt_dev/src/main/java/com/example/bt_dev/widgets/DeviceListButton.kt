@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.example.bluetoothmodule.ui.theme.DisableBluetoothAdapter
 import com.example.bluetoothmodule.ui.theme.EnableBluetoothAdapter
 import com.example.bt_dev.models.Device
-import com.example.bt_dev.services.BluetoothService
+import com.example.bt_dev.services.BluetoothDevicesService
 import com.example.bt_dev.util.IntentsProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -46,14 +46,14 @@ fun DeviceListButton(
     devicesState: MutableState<List<Device>>,
     activity: Activity,
     snackbarHostState: SnackbarHostState,
-    bluetoothService: BluetoothService
+    bluetoothService: BluetoothDevicesService
 ) {
     val scope = rememberCoroutineScope()
-    val bluetoothService = BluetoothService.getInstanceAndInitAdapter(LocalContext.current, activity);
+    val bluetoothDevicesService = BluetoothDevicesService.getInstanceAndInitAdapter(LocalContext.current, activity);
     val colorState = remember {
-        mutableStateOf(bluetoothService.adapter?.isEnabled ?: false)
+        mutableStateOf(bluetoothDevicesService.adapter?.isEnabled ?: false)
     }
-    val launcher = bluetoothService.instance.enableBluetoothAndLoadBluetoothDeviceList(
+    val launcher = bluetoothDevicesService.instance.enableBluetoothAndLoadBluetoothDeviceList(
         context = LocalContext.current,
         colorState = colorState,
         devicesState

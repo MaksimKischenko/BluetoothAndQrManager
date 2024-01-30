@@ -29,13 +29,13 @@ import com.example.bt_dev.util.IntentsProvider
 import java.util.concurrent.CompletableFuture
 
 
-class BluetoothService {
+class BluetoothDevicesService {
     var pairedDevicesList = mutableListOf<Device>()
     var foundDevicesList = mutableListOf<Device>()
     val promise = CompletableFuture<MutableList<Device>>()
-    data class BluetoothServiceResult(val instance: BluetoothService, val adapter: BluetoothAdapter?)
+    data class BluetoothServiceResult(val instance: BluetoothDevicesService, val adapter: BluetoothAdapter?)
     companion object {
-        private var instance: BluetoothService? = null
+        private var instance: BluetoothDevicesService? = null
         private var btAdapter : BluetoothAdapter? = null
 
 
@@ -44,7 +44,7 @@ class BluetoothService {
             if (instance == null) {
                 val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
                 btAdapter = bManager.adapter
-                instance =  BluetoothService()
+                instance =  BluetoothDevicesService()
             }
             return BluetoothServiceResult(instance!!, btAdapter)
         }
