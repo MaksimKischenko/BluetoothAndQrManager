@@ -34,10 +34,13 @@ import androidx.compose.ui.unit.dp
 import com.example.bluetoothmodule.ui.theme.DisableBluetoothAdapter
 import com.example.bluetoothmodule.ui.theme.EnableBluetoothAdapter
 import com.example.bt_dev.models.Device
+import com.example.bt_dev.services.BluetoothController
 import com.example.bt_dev.services.BluetoothDevicesService
 import com.example.bt_dev.util.IntentsProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import org.koin.core.parameter.parametersOf
 
 
 @RequiresApi(Build.VERSION_CODES.S)
@@ -49,11 +52,14 @@ fun DeviceListButton(
     bluetoothService: BluetoothDevicesService
 ) {
     val scope = rememberCoroutineScope()
-    val bluetoothDevicesService = BluetoothDevicesService.getInstanceAndInitAdapter(LocalContext.current, activity);
+    val context = LocalContext.current
+    val bluetoothDevicesService = koinInject<BluetoothDevicesService>(parameters = { parametersOf(context) })
+
+
     val colorState = remember {
-        mutableStateOf(bluetoothDevicesService.adapter?.isEnabled ?: false)
+        mutableStateOf(bluetoothDevicesService.btAdapter?.isEnabled ?: false)
     }
-    val launcher = bluetoothDevicesService.instance.enableBluetoothAndLoadBluetoothDeviceList(
+    val launcher = bluetoothDevicesService.enableBluetoothAndLoadBluetoothDeviceList(
         context = LocalContext.current,
         colorState = colorState,
         devicesState

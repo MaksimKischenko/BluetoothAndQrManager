@@ -1,4 +1,6 @@
 package com.example.bt_dev.widgets
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,7 +48,7 @@ fun FoundDeviceItem(device: Device, selected: Boolean, onTap: (item: Device) -> 
             modifier = Modifier.padding(8.dp)
         ) {
             Text(
-                text = name?:"",
+                text = name,
                 fontSize = 18.sp,
                 fontFamily = FontFamily(
                     font

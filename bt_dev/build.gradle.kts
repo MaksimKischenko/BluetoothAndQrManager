@@ -44,6 +44,7 @@ dependencies {
     implementation ("androidx.compose.ui:ui-text-google-fonts:1.6.0")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation ("io.insert-koin:koin-androidx-compose:3.5.3")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
     implementation("androidx.compose.ui:ui")

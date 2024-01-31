@@ -22,6 +22,7 @@ import androidx.compose.runtime.MutableState
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
+import androidx.lifecycle.MutableLiveData
 import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
@@ -29,153 +30,166 @@ import com.example.bt_dev.util.IntentsProvider
 import java.util.concurrent.CompletableFuture
 
 
-class BluetoothDevicesService {
+class BluetoothDevicesService(context: Context) {
+    var btAdapter: BluetoothAdapter? = null
     var pairedDevicesList = mutableListOf<Device>()
     var foundDevicesList = mutableListOf<Device>()
-    val promise = CompletableFuture<MutableList<Device>>()
-    data class BluetoothServiceResult(val instance: BluetoothDevicesService, val adapter: BluetoothAdapter?)
-    companion object {
-        private var instance: BluetoothDevicesService? = null
-        private var btAdapter : BluetoothAdapter? = null
+    var promise = CompletableFuture<MutableList<Device>>()
+    val liveData: MutableLiveData<MutableList<Device>> = MutableLiveData()
 
+    init {
+        val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        btAdapter = bManager.adapter
+    }
 
-
-        fun getInstanceAndInitAdapter(context: Context, activity: Activity): BluetoothServiceResult {
-            if (instance == null) {
-                val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-                btAdapter = bManager.adapter
-                instance =  BluetoothDevicesService()
-            }
-            return BluetoothServiceResult(instance!!, btAdapter)
+    fun startBtDiscovery() {
+        Log.d("MyLog", "startBtDiscovery")
+        try {
+            val st = btAdapter?.startDiscovery()
+            Log.d("MyLog", st.toString())
+        } catch (e: SecurityException) {
+            Log.d("MyLog", "ERROR_START_DISCOVERY: ${e}")
         }
     }
 
 
-        fun startBtDiscovery() {
-            Log.d("MyLog", "startBtDiscovery")
-            try {
-               val st =  btAdapter?.startDiscovery()
-                Log.d("MyLog", st.toString())
-            } catch (e:SecurityException) {
-                Log.d("MyLog", "ERROR_START_DISCOVERY: ${e}")
+    fun checkPermissions(context: Context, activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ) != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(
+                        Manifest.permission.BLUETOOTH_CONNECT,
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ), 1
+                )
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ), 1
+                )
             }
         }
+    }
 
 
-       fun checkPermissions(context: Context, activity: Activity) {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN ) != PackageManager.PERMISSION_GRANTED
-                    &&  ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED
-                    &&  ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    ActivityCompat.requestPermissions(
-                        activity,
-                        arrayOf(
-                            Manifest.permission.BLUETOOTH_CONNECT,
-                            Manifest.permission.BLUETOOTH_SCAN,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        ), 1
-                    )
-                }
+    @Composable
+    fun enableBluetoothAndLoadBluetoothDeviceList(
+        context: Context,
+        colorState: MutableState<Boolean>,
+        devicesState: MutableState<List<Device>>,
+    ): ManagedActivityResultLauncher<Intent, ActivityResult> {
+        return rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                Toast.makeText(context, "Bluetooth включен", Toast.LENGTH_SHORT).show()
+                colorState.value = true
+                devicesState.value = getBluetoothDeviceList(context)
+                pairedDevicesList.addAll(devicesState.value)
             } else {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    ActivityCompat.requestPermissions(
-                        activity,
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        ), 1
-                    )
-                }
+                Toast.makeText(context, "Bluetooth выключен", Toast.LENGTH_SHORT).show()
             }
         }
-
-
-        @Composable
-        fun enableBluetoothAndLoadBluetoothDeviceList(
-            context: Context,
-            colorState: MutableState<Boolean>,
-            devicesState: MutableState<List<Device>>,
-        ) : ManagedActivityResultLauncher<Intent, ActivityResult> {
-            return rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == Activity.RESULT_OK) {
-                    Toast.makeText(context, "Bluetooth включен", Toast.LENGTH_SHORT).show()
-                    colorState.value = true
-                    devicesState.value = getBluetoothDeviceList(context)
-                    pairedDevicesList.addAll(devicesState.value)
-                } else {
-                    Toast.makeText(context, "Bluetooth выключен", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-       private fun getBluetoothDeviceList(context: Context): List<Device> {
-            val tempList = ArrayList<Device>()
-            try {
-                val pairedDevices: Set<BluetoothDevice>? = btAdapter?.bondedDevices
-                pairedDevices?.forEach {
-                    tempList.add(Device(it, isSelected(context, it.address)))
-                }
-            } catch (e: SecurityException) {
-                tempList.add(Device(null,  false))
-            }
-            return tempList
-        }
-
-        private fun isSelected(context: Context, itemMacAddress: String) : Boolean{
-            return try {
-                val preferencesManager = PreferencesManager.getInstance(context)
-                val selectedMacAddressName = when {
-                    preferencesManager.contains(PrefsKeys.selectedDeviceMac.key) ->
-                        preferencesManager.read(PrefsKeys.selectedDeviceMac)
-                    else -> ""
-                }
-                when (selectedMacAddressName) {
-                    itemMacAddress -> true
-                    else -> false
-                }
-            } catch (e: Exception) {
-                false
-            }
-        }
-
-
-        //Один и тот же приемник но есть фильтр
-        private val bReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-               if(intent?.action == BluetoothDevice.ACTION_FOUND) {
-                   val device = IntentCompat.getParcelableExtra(
-                       intent,
-                       BluetoothDevice.EXTRA_DEVICE,
-                       BluetoothDevice::class.java
-                   )
-
-                   Thread {
-                       if(!pairedDevicesList.map { e-> e.device }.contains(device)) {
-                           foundDevicesList.add(Device(device, false))
-                       }
-                       Thread.sleep(10000)
-                       promise.complete(foundDevicesList)
-                   }.start()
-
-                   try {
-                       Log.d("MyLog", "DEVICE: ${device?.address}")
-                   } catch (e:SecurityException) {
-                       Log.d("MyLog", "ERROR_GET: ${e}")
-                   }
-
-               } else if(intent?.action == BluetoothDevice.ACTION_BOND_STATE_CHANGED) {
-                   Log.d("MyLog", "ACTION_BOND_STATE_CHANGED")
-               } else if(intent?.action == BluetoothAdapter.ACTION_DISCOVERY_FINISHED) {
-                   Log.d("MyLog", "ACTION_DISCOVERY_FINISHED")
-               }
-            }
-        }
-
-      fun registerIntentFilters(activity: Activity) {
-            Log.d("MyLog", "registerIntentFilters")
-            activity.registerReceiver(bReceiver, IntentsProvider.actionFoundBluetoothDeviceFilter)
-            activity.registerReceiver(bReceiver, IntentsProvider.actionBondStateChangedBluetoothDeviceFilter)
-            activity.registerReceiver(bReceiver, IntentsProvider.actionDiscoveryFinishedBluetoothAdapterFilter)
-       }
     }
+
+    private fun getBluetoothDeviceList(context: Context): List<Device> {
+        val tempList = ArrayList<Device>()
+        try {
+            val pairedDevices: Set<BluetoothDevice>? = btAdapter?.bondedDevices
+            pairedDevices?.forEach {
+                tempList.add(Device(it, isSelected(context, it.address)))
+            }
+        } catch (e: SecurityException) {
+            tempList.add(Device(null, false))
+        }
+        return tempList
+    }
+
+    private fun isSelected(context: Context, itemMacAddress: String): Boolean {
+        return try {
+            val preferencesManager = PreferencesManager.getInstance(context)
+            val selectedMacAddressName = when {
+                preferencesManager.contains(PrefsKeys.selectedDeviceMac.key) ->
+                    preferencesManager.read(PrefsKeys.selectedDeviceMac)
+
+                else -> ""
+            }
+            when (selectedMacAddressName) {
+                itemMacAddress -> true
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+
+    //Один и тот же приемник но есть фильтр
+    private val bReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            var device: BluetoothDevice? = null
+            when (intent?.action) {
+                BluetoothDevice.ACTION_FOUND -> {
+                    device = IntentCompat.getParcelableExtra(
+                        intent,
+                        BluetoothDevice.EXTRA_DEVICE,
+                        BluetoothDevice::class.java
+                    )
+                    if (!pairedDevicesList.map { e -> e.device }.contains(device)) {
+                        foundDevicesList.add(Device(device, false))
+                    }
+                    try {
+                        Log.d("MyLog", "DEVICE: ${device?.address}")
+                    } catch (e: SecurityException) {
+                        Log.d("MyLog", "ERROR_GET: ${e}")
+                    }
+                }
+                BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
+                    Log.d("MyLog", "ACTION_BOND_STATE_CHANGED")
+                }
+                BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                    Thread {
+                        foundDevicesList = foundDevicesList.distinctBy { it.device?.address }.toMutableList()
+                        promise.complete(foundDevicesList)
+                        Thread.sleep(1000)
+                    }.start()
+
+                    Log.d("MyLog", "ACTION_DISCOVERY_FINISHED")
+                }
+            }
+        }
+    }
+
+    fun registerIntentFilters(activity: Activity) {
+        Log.d("MyLog", "registerIntentFilters")
+        activity.registerReceiver(bReceiver, IntentsProvider.actionFoundBluetoothDeviceFilter)
+        activity.registerReceiver(
+            bReceiver,
+            IntentsProvider.actionBondStateChangedBluetoothDeviceFilter
+        )
+        activity.registerReceiver(
+            bReceiver,
+            IntentsProvider.actionDiscoveryFinishedBluetoothAdapterFilter
+        )
+    }
+}
