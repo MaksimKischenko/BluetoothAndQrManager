@@ -39,6 +39,8 @@ android {
 }
 
 dependencies {
+    implementation ("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation ("androidx.navigation:navigation-compose:2.7.6")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
     implementation ("androidx.compose.ui:ui-text-google-fonts:1.6.0")

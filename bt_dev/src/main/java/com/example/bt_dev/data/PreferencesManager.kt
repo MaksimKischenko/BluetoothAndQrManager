@@ -3,6 +3,7 @@ package com.example.bt_dev.data
 import android.content.Context
 import android.content.SharedPreferences
 
+//    implementation("androidx.datastore:datastore-preferences:1.0.0")
 class PreferencesManager private constructor(context:Context)  {
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE) // только наше приложение получает доступ

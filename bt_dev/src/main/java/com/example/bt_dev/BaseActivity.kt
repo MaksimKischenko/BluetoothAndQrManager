@@ -1,29 +1,38 @@
 package com.example.bt_dev
 
-import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-
-
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat.startActivity
 import com.example.bluetoothmodule.ui.theme.BaseModuleTheme
 import com.example.bt_dev.di.appModule
-import com.example.bt_dev.services.BluetoothController
-import com.example.bt_dev.services.BluetoothDevicesService
-import com.example.bt_dev.widgets.DeviceList
-import org.koin.android.ext.koin.androidContext
+import com.example.bt_dev.screens.MainScreen
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanIntentResult
+import com.journeyapps.barcodescanner.ScanOptions
 import org.koin.android.ext.koin.androidLogger
-import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
-import org.koin.core.parameter.parametersOf
 
-class BaseActivity : ComponentActivity() {
-    private val activity = this
+open class BaseActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,10 +42,24 @@ class BaseActivity : ComponentActivity() {
         }
         setContent {
             BaseModuleTheme {
-                BaseContent(
-                    activity,
-                    LocalContext.current
-                )
+                MainScreen(this, scanLauncherInit(this))
+            }
+        }
+    }
+}
+
+
+@Composable
+fun scanLauncherInit(context: Context): ManagedActivityResultLauncher<ScanOptions, ScanIntentResult> {
+    return rememberLauncherForActivityResult(ScanContract()) { result ->
+        if(result.contents == null) {
+            Toast.makeText(context, "Scan Data: NULL", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(context, "Scan Data: ${result.contents}", Toast.LENGTH_LONG).show()
+            if (result.contents.startsWith("http://") || result.contents.startsWith("https://")) {
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.data = Uri.parse(result.contents)
+                startActivity(context, intent, null)
             }
         }
     }
@@ -44,20 +67,5 @@ class BaseActivity : ComponentActivity() {
 
 
 
-@RequiresApi(Build.VERSION_CODES.S)
-@Composable
-fun BaseContent(
-    activity: Activity,
-    context: Context,
-    bluetoothDevicesService: BluetoothDevicesService = koinInject(parameters = { parametersOf(context)}),
-    bluetoothController: BluetoothController = koinInject(parameters = { parametersOf(bluetoothDevicesService.btAdapter)})
-) {
-    bluetoothDevicesService.checkPermissions(context, activity)
-    bluetoothDevicesService.registerIntentFilters(activity)
-    DeviceList(
-        activity,
-        bluetoothDevicesService,
-        bluetoothController
-    )
-}
+
 

@@ -22,24 +22,26 @@ import androidx.compose.runtime.MutableState
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
-import androidx.lifecycle.MutableLiveData
 import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
 import com.example.bt_dev.util.IntentsProvider
+import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.CompletableFuture
 
 
-class BluetoothDevicesService(context: Context) {
+class BluetoothDevicesService(context: Context, activity: Activity) {
     var btAdapter: BluetoothAdapter? = null
     var pairedDevicesList = mutableListOf<Device>()
     var foundDevicesList = mutableListOf<Device>()
-    var promise = CompletableFuture<MutableList<Device>>()
-    val liveData: MutableLiveData<MutableList<Device>> = MutableLiveData()
+    var devicePromise = CompletableFuture<MutableList<Device>>()
+    var foundDevicesFlow: Flow<List<Device>>? = null
 
     init {
         val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         btAdapter = bManager.adapter
+        checkPermissions(context, activity)
+        registerIntentFilters(activity)
     }
 
     fun startBtDiscovery() {
@@ -49,47 +51,6 @@ class BluetoothDevicesService(context: Context) {
             Log.d("MyLog", st.toString())
         } catch (e: SecurityException) {
             Log.d("MyLog", "ERROR_START_DISCOVERY: ${e}")
-        }
-    }
-
-
-    fun checkPermissions(context: Context, activity: Activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ) != PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(
-                        Manifest.permission.BLUETOOTH_CONNECT,
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ), 1
-                )
-            }
-        } else {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ), 1
-                )
-            }
         }
     }
 
@@ -131,7 +92,6 @@ class BluetoothDevicesService(context: Context) {
             val selectedMacAddressName = when {
                 preferencesManager.contains(PrefsKeys.selectedDeviceMac.key) ->
                     preferencesManager.read(PrefsKeys.selectedDeviceMac)
-
                 else -> ""
             }
             when (selectedMacAddressName) {
@@ -143,44 +103,83 @@ class BluetoothDevicesService(context: Context) {
         }
     }
 
-
-    //Один и тот же приемник но есть фильтр
     private val bReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            var device: BluetoothDevice? = null
             when (intent?.action) {
                 BluetoothDevice.ACTION_FOUND -> {
-                    device = IntentCompat.getParcelableExtra(
+                    val device = IntentCompat.getParcelableExtra(
                         intent,
                         BluetoothDevice.EXTRA_DEVICE,
                         BluetoothDevice::class.java
                     )
-                    if (!pairedDevicesList.map { e -> e.device }.contains(device)) {
+                    if (!pairedDevicesList.map { e -> e.device }.contains(device)
+                        && !foundDevicesList.map { e -> e.device }.contains(device)
+                    ) {
                         foundDevicesList.add(Device(device, false))
                     }
+//                    foundDevicesFlow = flowOf(foundDevicesList)
                     try {
                         Log.d("MyLog", "DEVICE: ${device?.address}")
                     } catch (e: SecurityException) {
                         Log.d("MyLog", "ERROR_GET: ${e}")
                     }
                 }
+
                 BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
                     Log.d("MyLog", "ACTION_BOND_STATE_CHANGED")
                 }
-                BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                    Thread {
-                        foundDevicesList = foundDevicesList.distinctBy { it.device?.address }.toMutableList()
-                        promise.complete(foundDevicesList)
-                        Thread.sleep(1000)
-                    }.start()
 
+                BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                    foundDevicesList =
+                        foundDevicesList.distinctBy { it.device?.address }.toMutableList()
+                    devicePromise.complete(foundDevicesList)
                     Log.d("MyLog", "ACTION_DISCOVERY_FINISHED")
                 }
             }
         }
     }
 
-    fun registerIntentFilters(activity: Activity) {
+    private fun checkPermissions(context: Context, activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ) != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(
+                        Manifest.permission.BLUETOOTH_CONNECT,
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ), 1
+                )
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ), 1
+                )
+            }
+        }
+    }
+
+    private fun registerIntentFilters(activity: Activity) {
         Log.d("MyLog", "registerIntentFilters")
         activity.registerReceiver(bReceiver, IntentsProvider.actionFoundBluetoothDeviceFilter)
         activity.registerReceiver(
