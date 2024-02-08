@@ -158,12 +158,10 @@ fun DeviceList(
             }
         }
         SearchNewDevicesDialog(
-            LocalContext.current,
-            openDialog
+            openAlertDialog = openDialog
         )
     }
 }
-
 
 
 private fun checkLocationSettings(

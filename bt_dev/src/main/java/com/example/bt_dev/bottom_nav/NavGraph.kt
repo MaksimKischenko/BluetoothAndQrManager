@@ -23,7 +23,6 @@ fun NavGraph(
     innerPadding: PaddingValues,
     activity: Activity,
     navHostController: NavHostController,
-    scanLauncher: ActivityResultLauncher<ScanOptions>
 ) {
     NavHost(
         navController = navHostController,
@@ -35,7 +34,7 @@ fun NavGraph(
                 )
             }
             composable("qRCamScreen") {
-                QrScanScreen(scanLauncher)
+                QrScanScreen()
             }
         }
     )

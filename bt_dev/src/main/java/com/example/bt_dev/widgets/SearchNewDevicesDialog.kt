@@ -54,7 +54,7 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun SearchNewDevicesDialog(
-    context:Context,
+    context:Context = LocalContext.current,
     openAlertDialog: MutableState<Boolean>
 ) {
     val bluetoothDevicesService = koinInject<BluetoothDevicesService>(parameters = { parametersOf(context) })

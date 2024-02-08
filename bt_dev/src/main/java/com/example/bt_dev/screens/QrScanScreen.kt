@@ -1,7 +1,12 @@
 package com.example.bt_dev.screens
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -17,19 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import com.example.bt_dev.services.BluetoothDevicesService
-import com.example.bt_dev.services.QrScanService
+import androidx.core.content.ContextCompat
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanIntentResult
 import com.journeyapps.barcodescanner.ScanOptions
-import org.koin.compose.koinInject
-import org.koin.core.parameter.parametersOf
+
 
 //implementation ("com.journeyapps:zxing-android-embedded:4.3.0")
 //https://github.com/journeyapps/zxing-android-embedded
 @Composable
 fun QrScanScreen(
-    scanLauncher: ActivityResultLauncher<ScanOptions>,
     context: Context = LocalContext.current,
-    qrScanService: QrScanService = koinInject(parameters = { parametersOf(context)}),
+    scanLauncher: ActivityResultLauncher<ScanOptions> = scanLauncherInit(context),
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -60,8 +64,24 @@ fun QrScanScreen(
     }
 }
 
+@Composable
+fun scanLauncherInit(context: Context): ManagedActivityResultLauncher<ScanOptions, ScanIntentResult> {
+    return rememberLauncherForActivityResult(ScanContract()) { result ->
+        if(result.contents == null) {
+            Toast.makeText(context, "Scan Data: NULL", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(context, "Scan Data: ${result.contents}", Toast.LENGTH_LONG).show()
+            if (result.contents.startsWith("http://") || result.contents.startsWith("https://")) {
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.data = Uri.parse(result.contents)
+                ContextCompat.startActivity(context, intent, null)
+            }
+        }
+    }
+}
+
 fun scan(
-    scanLauncher: ActivityResultLauncher<ScanOptions>
+    scanLauncher: ActivityResultLauncher<ScanOptions>,
 ) {
     val options = ScanOptions()
     options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
@@ -75,5 +95,4 @@ fun scan(
     } catch (e: Exception) {
         Log.d("MyLog", "$e")
     }
-
 }

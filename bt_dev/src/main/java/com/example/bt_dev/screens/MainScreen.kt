@@ -15,10 +15,8 @@ import com.journeyapps.barcodescanner.ScanOptions
 @Composable
 fun MainScreen(
     activity: Activity,
-    scanLauncher: ActivityResultLauncher<ScanOptions>
 ) {
     val navController = rememberNavController()
-
     Scaffold(
         bottomBar = {
             BottomNavigationContainer(navController = navController)
@@ -28,7 +26,6 @@ fun MainScreen(
             innerPadding,
             activity,
             navHostController = navController,
-            scanLauncher = scanLauncher
         )
     }
 }

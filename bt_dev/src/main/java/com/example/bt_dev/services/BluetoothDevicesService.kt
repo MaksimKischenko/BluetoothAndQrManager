@@ -27,6 +27,7 @@ import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
 import com.example.bt_dev.util.IntentsProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import java.util.concurrent.CompletableFuture
 
 
@@ -48,9 +49,9 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
         Log.d("MyLog", "startBtDiscovery")
         try {
             val st = btAdapter?.startDiscovery()
-            Log.d("MyLog", st.toString())
+            Log.d("MyLog", "Discovery started: ${st.toString()}")
         } catch (e: SecurityException) {
-            Log.d("MyLog", "ERROR_START_DISCOVERY: ${e}")
+            Log.d("MyLog", "ERROR_START_DISCOVERY: $e")
         }
     }
 
@@ -117,7 +118,9 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                     ) {
                         foundDevicesList.add(Device(device, false))
                     }
-//                    foundDevicesFlow = flowOf(foundDevicesList)
+//                    foundDevicesFlow = flow {
+//                        emit(foundDevicesList)
+//                    } //flowOf(foundDevicesList)
                     try {
                         Log.d("MyLog", "DEVICE: ${device?.address}")
                     } catch (e: SecurityException) {
@@ -130,8 +133,7 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                 }
 
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                    foundDevicesList =
-                        foundDevicesList.distinctBy { it.device?.address }.toMutableList()
+                    foundDevicesList = foundDevicesList.distinctBy { it.device?.address }.toMutableList()
                     devicePromise.complete(foundDevicesList)
                     Log.d("MyLog", "ACTION_DISCOVERY_FINISHED")
                 }
