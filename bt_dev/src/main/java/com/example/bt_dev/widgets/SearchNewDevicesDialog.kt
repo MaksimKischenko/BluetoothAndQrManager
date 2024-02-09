@@ -67,7 +67,6 @@ fun SearchNewDevicesDialog(
 
     when {
         openAlertDialog.value -> {
-
             Dialog(
                 onDismissRequest = {
                     openAlertDialog.value = false
@@ -86,7 +85,7 @@ fun SearchNewDevicesDialog(
                     LaunchedEffect(Unit) {
                         coroutineScope.launch  {
                             withContext(Dispatchers.IO) {
-                                viewModel.listenForDevicesPromise(
+                                viewModel.listenForDevicesFlow(
                                     loadingIndicatorState,
                                     foundDeviceListState
                                 )

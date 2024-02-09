@@ -26,7 +26,9 @@ import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
 import com.example.bt_dev.util.IntentsProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import java.util.concurrent.CompletableFuture
 
 
@@ -40,8 +42,10 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
     init {
         val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         btAdapter = bManager.adapter
-        checkPermissions(context, activity)
-        registerIntentFilters(activity)
+        Thread{
+            checkPermissions(context, activity)
+            registerIntentFilters(activity)
+        }.start()
     }
 
     fun startBtDiscovery() {
@@ -117,6 +121,7 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                     ) {
                         foundDevicesList.add(Device(device, false))
                     }
+                    foundDevicesFlow = devicesFlow(foundDevicesList)
 //                    foundDevicesFlow = flow {
 //                        emit(foundDevicesList)
 //                    } //flowOf(foundDevicesList)
@@ -138,6 +143,10 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                 }
             }
         }
+    }
+
+    fun devicesFlow(foundDevicesList: MutableList<Device>): Flow<List<Device>> = flow {
+        emit(foundDevicesList)
     }
 
     private fun checkPermissions(context: Context, activity: Activity) {

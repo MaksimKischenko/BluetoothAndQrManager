@@ -26,7 +26,6 @@ class SearchDevicesViewModel(private var bluetoothDevicesService: BluetoothDevic
         loadingIndicatorState: MutableState<Boolean>,
         foundDeviceListState: MutableState<List<Device>>
     ) = viewModelScope.launch {
-        delay(10000)
         bluetoothDevicesService.foundDevicesFlow?.collect {
             loadingIndicatorState.value = false
             foundDeviceListState.value = it
