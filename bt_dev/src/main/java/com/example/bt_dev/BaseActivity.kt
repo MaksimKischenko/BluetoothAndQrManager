@@ -23,7 +23,7 @@ open class BaseActivity : ComponentActivity() {
         }
         setContent {
             BaseModuleTheme {
-                MainScreen(this)
+                MainScreen(this@BaseActivity)
             }
         }
     }

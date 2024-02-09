@@ -9,6 +9,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,6 +54,7 @@ import kotlinx.coroutines.launch
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun DeviceList(
+    innerPadding: PaddingValues,
     activity: Activity,
     bluetoothDevicesService: BluetoothDevicesService,
     bluetoothController: BluetoothController
@@ -70,6 +72,7 @@ fun DeviceList(
     val openDialog = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Scaffold(
+        modifier = Modifier.padding(innerPadding),
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
