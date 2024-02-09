@@ -1,8 +1,6 @@
 package com.example.bt_dev.widgets
 
-import android.app.Activity
 import android.content.Context
-import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
@@ -24,11 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,12 +37,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.bt_dev.models.Device
+import com.example.bt_dev.models.DevicesStateEnum
 import com.example.bt_dev.services.BluetoothDevicesService
 import com.example.bt_dev.viewmodel.SearchDevicesViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -61,7 +55,7 @@ fun SearchNewDevicesDialog(
     val viewModel = koinViewModel<SearchDevicesViewModel>(parameters = { parametersOf(bluetoothDevicesService) })
     val selectedDevicesState = remember { mutableStateOf<List<Device>>(emptyList())}
     val selectedDevices = mutableListOf<Device>()
-    val foundDeviceListState = remember { mutableStateOf<List<Device>>(emptyList()) } //bluetoothDevicesService.flow.collectAsState(initial = emptyList())
+    val foundDeviceListState = remember { mutableStateOf<List<Device>>(emptyList()) }
     val loadingIndicatorState = remember { mutableStateOf(foundDeviceListState.value.isEmpty()) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -78,22 +72,22 @@ fun SearchNewDevicesDialog(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
-                        .padding(16.dp),
+                        .height(800.dp)
+                        .padding(8.dp),
                     shape = RoundedCornerShape(16.dp),
                 ) {
-                    LaunchedEffect(Unit) {
-                        coroutineScope.launch  {
-                            withContext(Dispatchers.IO) {
-                                viewModel.listenForDevicesFlow(
-                                    loadingIndicatorState,
-                                    foundDeviceListState
-                                )
-                            }
-                        }
-                    }
-
-                    SearchDeviceListTitle()
+                    viewModel.ListenForDevicesToState(
+                        DevicesStateEnum.FLOW,
+                        coroutineScope,
+                        loadingIndicatorState,
+                        foundDeviceListState
+                    )
+                    SearchDeviceListTitle(
+                        openAlertDialog,
+                        viewModel,
+                        loadingIndicatorState,
+                        foundDeviceListState
+                    )
                     IndeterminateCircularIndicator(loadingIndicatorState)
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -133,6 +127,9 @@ fun SearchNewDevicesDialog(
     }
 }
 
+
+
+
 @Composable
 fun IndeterminateCircularIndicator(
     loading: MutableState<Boolean>
@@ -156,7 +153,6 @@ fun LoadingAnimation3(
     animationDelay: Int = 400,
     initialAlpha: Float = 0.3f
 ) {
-
     // 3 circles
     val circles = listOf(
         remember {
@@ -170,14 +166,11 @@ fun LoadingAnimation3(
         }
     )
 
-    circles.forEachIndexed { index, animatable ->
-
+    circles.forEachIndexed { index, action ->
         LaunchedEffect(Unit) {
-
             // Use coroutine delay to sync animations
             delay(timeMillis = (animationDelay / circles.size).toLong() * index)
-
-            animatable.animateTo(
+            action.animateTo(
                 targetValue = 1f,
                 animationSpec = infiniteRepeatable(
                     animation = tween(
@@ -188,13 +181,11 @@ fun LoadingAnimation3(
             )
         }
     }
-
     // container for circles
     Row(
         modifier = Modifier
         //.border(width = 2.dp, color = Color.Magenta)
     ) {
-
         // adding each circle
         circles.forEachIndexed { index, animatable ->
 
@@ -202,7 +193,6 @@ fun LoadingAnimation3(
             if (index != 0) {
                 Spacer(modifier = Modifier.width(width = 6.dp))
             }
-
             Box(
                 modifier = Modifier
                     .size(size = circleSize)

@@ -26,9 +26,8 @@ import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
 import com.example.bt_dev.util.IntentsProvider
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import java.util.concurrent.CompletableFuture
 
 
@@ -37,7 +36,7 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
     var pairedDevicesList = mutableListOf<Device>()
     var foundDevicesList = mutableListOf<Device>()
     var devicePromise = CompletableFuture<MutableList<Device>>()
-    var foundDevicesFlow: Flow<List<Device>>? = null
+    var foundDevicesFlow: Flow<Device>? = null
 
     init {
         val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -120,11 +119,9 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                         && !foundDevicesList.map { e -> e.device }.contains(device)
                     ) {
                         foundDevicesList.add(Device(device, false))
+                        foundDevicesFlow = flowOf(Device(device, false))
                     }
-                    foundDevicesFlow = devicesFlow(foundDevicesList)
-//                    foundDevicesFlow = flow {
-//                        emit(foundDevicesList)
-//                    } //flowOf(foundDevicesList)
+
                     try {
                         Log.d("MyLog", "DEVICE: ${device?.address}")
                     } catch (e: SecurityException) {
@@ -143,10 +140,6 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                 }
             }
         }
-    }
-
-    fun devicesFlow(foundDevicesList: MutableList<Device>): Flow<List<Device>> = flow {
-        emit(foundDevicesList)
     }
 
     private fun checkPermissions(context: Context, activity: Activity) {

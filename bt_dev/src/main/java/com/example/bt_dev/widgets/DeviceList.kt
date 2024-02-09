@@ -111,11 +111,11 @@ fun DeviceList(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
-    ) { innerPadding ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(innerPadding)
+                .padding(padding)
                 .padding(8.dp)
         ) {
             DeviceListButton(
