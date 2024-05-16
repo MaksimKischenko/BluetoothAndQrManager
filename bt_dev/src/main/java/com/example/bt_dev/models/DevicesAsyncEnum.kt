@@ -1,6 +1,6 @@
 package com.example.bt_dev.models
 
-enum class DevicesStateEnum {
+enum class DevicesAsyncEnum {
     FLOW,
     PROMISE
 }

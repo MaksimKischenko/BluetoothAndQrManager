@@ -4,14 +4,16 @@ package com.example.bt_dev.viewmodel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bt_dev.models.Device
-import com.example.bt_dev.models.DevicesStateEnum
+import com.example.bt_dev.models.DevicesAsyncEnum
 import com.example.bt_dev.services.BluetoothDevicesService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CompletableFuture
@@ -23,7 +25,7 @@ class SearchDevicesViewModel(private var bluetoothDevicesService: BluetoothDevic
 
     @Composable
     fun ListenForDevicesToState(
-        devicesState: DevicesStateEnum,
+        devicesAsyncState: DevicesAsyncEnum,
         coroutineScope: CoroutineScope,
         loadingIndicatorState: MutableState<Boolean>,
         foundDeviceListState: MutableState<List<Device>>
@@ -31,15 +33,15 @@ class SearchDevicesViewModel(private var bluetoothDevicesService: BluetoothDevic
         LaunchedEffect(Unit) {
             coroutineScope.launch  {
                 withContext(Dispatchers.IO) {
-                    if(devicesState == DevicesStateEnum.FLOW){
-                        repeat(15){
-                            delay(800)
+                    if(devicesAsyncState == DevicesAsyncEnum.FLOW){
+                        repeat(30){
+                            delay(400)
                             listenForDevicesFlow(
                                 loadingIndicatorState,
                                 foundDeviceListState
                             )
                         }
-                    } else if(devicesState == DevicesStateEnum.PROMISE){
+                    } else if(devicesAsyncState == DevicesAsyncEnum.PROMISE){
                         listenForDevicesPromise(
                             loadingIndicatorState,
                             foundDeviceListState
@@ -63,6 +65,7 @@ class SearchDevicesViewModel(private var bluetoothDevicesService: BluetoothDevic
         loadingIndicatorState: MutableState<Boolean>,
         foundDeviceListState: MutableState<List<Device>>
     ) {
+
         bluetoothDevicesService.foundDevicesFlow?.collect {
             loadingIndicatorState.value = false
             if(!tempList.contains(it)){

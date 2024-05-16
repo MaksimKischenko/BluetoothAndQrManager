@@ -36,8 +36,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.bt_dev.data.DataManager
 import com.example.bt_dev.models.Device
-import com.example.bt_dev.models.DevicesStateEnum
 import com.example.bt_dev.services.BluetoothDevicesService
 import com.example.bt_dev.viewmodel.SearchDevicesViewModel
 import kotlinx.coroutines.delay
@@ -59,6 +59,13 @@ fun SearchNewDevicesDialog(
     val loadingIndicatorState = remember { mutableStateOf(foundDeviceListState.value.isEmpty()) }
     val coroutineScope = rememberCoroutineScope()
 
+    viewModel.ListenForDevicesToState(
+        DataManager.devicesAsyncMethod,
+        coroutineScope,
+        loadingIndicatorState,
+        foundDeviceListState
+    )
+
     when {
         openAlertDialog.value -> {
             Dialog(
@@ -76,12 +83,6 @@ fun SearchNewDevicesDialog(
                         .padding(8.dp),
                     shape = RoundedCornerShape(16.dp),
                 ) {
-                    viewModel.ListenForDevicesToState(
-                        DevicesStateEnum.FLOW,
-                        coroutineScope,
-                        loadingIndicatorState,
-                        foundDeviceListState
-                    )
                     SearchDeviceListTitle(
                         openAlertDialog,
                         viewModel,

@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -22,15 +23,28 @@ import androidx.compose.runtime.MutableState
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
+import com.example.bt_dev.data.DataManager
 import com.example.bt_dev.data.PreferencesManager
 import com.example.bt_dev.data.PrefsKeys
 import com.example.bt_dev.models.Device
+import com.example.bt_dev.models.DevicesAsyncEnum
 import com.example.bt_dev.util.IntentsProvider
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import java.util.concurrent.CompletableFuture
+import android.content.ContentProvider
+import android.content.ContentValues
+import android.database.Cursor
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+// Model
 
 
+@OptIn(DelicateCoroutinesApi::class)
 class BluetoothDevicesService(context: Context, activity: Activity) {
     var btAdapter: BluetoothAdapter? = null
     var pairedDevicesList = mutableListOf<Device>()
@@ -41,10 +55,11 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
     init {
         val bManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         btAdapter = bManager.adapter
-        Thread{
+        val job = GlobalScope.launch{
             checkPermissions(context, activity)
             registerIntentFilters(activity)
-        }.start()
+        }
+        job.cancel()
     }
 
     fun startBtDiscovery() {
@@ -90,6 +105,7 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
     }
 
     private fun isSelected(context: Context, itemMacAddress: String): Boolean {
+
         return try {
             val preferencesManager = PreferencesManager.getInstance(context)
             val selectedMacAddressName = when {
@@ -115,39 +131,42 @@ class BluetoothDevicesService(context: Context, activity: Activity) {
                         BluetoothDevice.EXTRA_DEVICE,
                         BluetoothDevice::class.java
                     )
-                    if (!pairedDevicesList.map { e -> e.device }.contains(device)
-                        && !foundDevicesList.map { e -> e.device }.contains(device)
-                    ) {
-                        foundDevicesList.add(Device(device, false))
-                        foundDevicesFlow = flowOf(Device(device, false))
+                    when(DataManager.devicesAsyncMethod){
+                        DevicesAsyncEnum.PROMISE -> {
+                            if (!pairedDevicesList.map { e -> e.device }.contains(device)
+                                && !foundDevicesList.map { e -> e.device }.contains(device)
+                            ) {
+                                foundDevicesList.add(Device(device, false))
+                            }
+                        }
+                        DevicesAsyncEnum.FLOW -> {
+                            foundDevicesFlow = flowOf(Device(device, false))
+                        }
                     }
-
                     try {
                         Log.d("MyLog", "DEVICE: ${device?.address}")
                     } catch (e: SecurityException) {
                         Log.d("MyLog", "ERROR_GET: ${e}")
                     }
                 }
-
                 BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
                     Log.d("MyLog", "ACTION_BOND_STATE_CHANGED")
                 }
-
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                    foundDevicesList = foundDevicesList.distinctBy { it.device?.address }.toMutableList()
-                    devicePromise.complete(foundDevicesList)
+                    if(DataManager.devicesAsyncMethod == DevicesAsyncEnum.PROMISE) {
+                        foundDevicesList = foundDevicesList.distinctBy { it.device?.address }.toMutableList()
+                        devicePromise.complete(foundDevicesList)
+                    }
                     Log.d("MyLog", "ACTION_DISCOVERY_FINISHED")
                 }
             }
         }
     }
 
-    private fun checkPermissions(context: Context, activity: Activity) {
+
+    private  fun checkPermissions(context: Context, activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ) != PackageManager.PERMISSION_GRANTED
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.ACCESS_FINE_LOCATION
